@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Url } from '../entities/url.entity';
@@ -6,27 +6,19 @@ import { CreateUrlDto } from '../dto/create-url.dto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject } from '@nestjs/common';
 import { Cache } from 'cache-manager';
+import { nanoid } from 'nanoid';
 import { UrlWithVisitCountResponseDto } from "../dto/url-with-visit-count-response-dto";
 import { ConfigService } from '../../infrastructure/config/config.service';
-import { encodeBase62 } from '../../common/utils/base62.util';
 
 @Injectable()
 export class UrlService {
-  private readonly cacheTtl: number;
-  private readonly minShortCodeValue: number;
-  private readonly maxShortCodeValue: number;
-
   constructor(
     @InjectRepository(Url)
     private urlRepository: Repository<Url>,
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
-    private readonly configService: ConfigService,
-  ) {
-    this.cacheTtl = this.configService.getNumber('CACHE_TTL') || 3600;
-    this.minShortCodeValue = this.configService.getNumber('MIN_SHORT_CODE_VALUE') || 1000000;
-    this.maxShortCodeValue = this.configService.getNumber('MAX_SHORT_CODE_VALUE') || 9999999;
-  }
+    private configService: ConfigService,
+  ) {}
 
   private async getUrlsWithVisitCountsQuery(skip: number, take: number) {
     return this.urlRepository
@@ -41,32 +33,21 @@ export class UrlService {
   }
 
   async create(createUrlDto: CreateUrlDto): Promise<Url> {
-    const { longUrl, customAlias } = createUrlDto;
-    let shortCode: string;
-
-    if (customAlias) {
-      const existingUrl = await this.urlRepository.findOne({ where: { shortCode: customAlias } });
-      if (existingUrl) {
-        throw new ConflictException('Custom alias already in use');
-      }
-      shortCode = customAlias;
-    } else {
-      shortCode = this.generateShortCode();
-      while (await this.urlRepository.findOne({ where: { shortCode } })) {
-        shortCode = this.generateShortCode();
-      }
-    }
+    const { longUrl } = createUrlDto;
+    const shortCodeLength = this.configService.getNumber('URL_SHORT_CODE_LENGTH');
+    const shortCode = nanoid(shortCodeLength);
 
     const url = this.urlRepository.create({ longUrl, shortCode });
     await this.urlRepository.save(url);
-    await this.cacheManager.set(shortCode, longUrl, this.cacheTtl);
+    const ttl = this.configService.getNumber('CACHE_TTL');
+    await this.cacheManager.set(shortCode, longUrl, ttl);
     return url;
   }
 
-  async findOne(shortCode: string): Promise<string> {
+  async findByShortCode(shortCode: string): Promise<Url> {
     const cachedUrl = await this.cacheManager.get<string>(shortCode);
     if (cachedUrl) {
-      return cachedUrl;
+      return { id: 0, longUrl: cachedUrl, shortCode, createdAt: new Date(), visits: [] };
     }
 
     const url = await this.urlRepository.findOne({ where: { shortCode } });
@@ -74,13 +55,9 @@ export class UrlService {
       throw new NotFoundException('URL not found');
     }
 
-    await this.cacheManager.set(shortCode, url.longUrl, this.cacheTtl);
-    return url.longUrl;
-  }
-
-  private generateShortCode(): string {
-    const randomNum = Math.floor(Math.random() * (this.maxShortCodeValue - this.minShortCodeValue + 1)) + this.minShortCodeValue;
-    return encodeBase62(randomNum);
+    const ttl = this.configService.getNumber('CACHE_TTL');
+    await this.cacheManager.set(shortCode, url.longUrl, ttl);
+    return url;
   }
 
   async getUrlsPaginated(skip: number = 0, take: number = 10): Promise<Url[]> {

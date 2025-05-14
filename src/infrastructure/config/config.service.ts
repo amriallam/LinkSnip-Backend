@@ -44,8 +44,7 @@ export class ConfigService {
       BASE_URL: Joi.string().uri().required(),
       DATABASE_SYNCHRONIZE: Joi.boolean().default(false),
       CACHE_TTL: Joi.number().default(3600),
-      MIN_SHORT_CODE_VALUE: Joi.number().default(1000000),
-      MAX_SHORT_CODE_VALUE: Joi.number().default(9999999),
+      URL_SHORT_CODE_LENGTH: Joi.number().default(10),
     });
 
     const { error, value: validatedEnvConfig } = envVarsSchema.validate(env, {

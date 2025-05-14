@@ -6,6 +6,8 @@ import { CreateUrlDto } from './dto/create-url.dto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject } from '@nestjs/common';
 import { Cache } from 'cache-manager';
+import { nanoid } from 'nanoid';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UrlService {
@@ -14,44 +16,33 @@ export class UrlService {
     private urlRepository: Repository<Url>,
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
-  ) {}
+    private configService: ConfigService,
+  ) { }
 
   async create(createUrlDto: CreateUrlDto): Promise<Url> {
-    const { longUrl, customAlias } = createUrlDto;
-    let shortUrl: string;
+    const { longUrl } = createUrlDto;
+    const shortCode = nanoid(10);
 
-    if (customAlias) {
-      const existingUrl = await this.urlRepository.findOne({ where: { shortUrl: customAlias } });
-      if (existingUrl) {
-        throw new ConflictException('Custom alias already in use');
-      }
-      shortUrl = customAlias;
-    } else {
-      shortUrl = this.generateShortUrl();
-    }
-
-    const url = this.urlRepository.create({ longUrl, shortUrl });
+    const url = this.urlRepository.create({ longUrl, shortCode });
     await this.urlRepository.save(url);
-    await this.cacheManager.set(shortUrl, longUrl, 3600); // Cache for 1 hour
+    const ttl = this.configService.get<number>('cache.ttl');
+    await this.cacheManager.set(shortCode, longUrl, ttl);
     return url;
   }
 
-  async findOne(shortUrl: string): Promise<string> {
-    const cachedUrl = await this.cacheManager.get<string>(shortUrl);
+  async findByShortCode(shortCode: string): Promise<Url> {
+    const cachedUrl = await this.cacheManager.get<string>(shortCode);
     if (cachedUrl) {
-      return cachedUrl;
+      return { id: 0, longUrl: cachedUrl, shortCode, createdAt: new Date(), visits: [] };
     }
 
-    const url = await this.urlRepository.findOne({ where: { shortUrl } });
+    const url = await this.urlRepository.findOne({ where: { shortCode } });
     if (!url) {
       throw new NotFoundException('URL not found');
     }
 
-    await this.cacheManager.set(shortUrl, url.longUrl, 3600);
-    return url.longUrl;
-  }
-
-  private generateShortUrl(): string {
-    return Math.random().toString(36).substring(2, 8);
+    const ttl = this.configService.get<number>('cache.ttl');
+    await this.cacheManager.set(shortCode, url.longUrl, ttl);
+    return url;
   }
 } 
