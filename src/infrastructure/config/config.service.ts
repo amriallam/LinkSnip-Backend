@@ -44,11 +44,11 @@ export class ConfigService {
       DATABASE_NAME: Joi.string().required(),
       BASE_URL: Joi.string().uri().required(),
       DATABASE_SYNCHRONIZE: Joi.boolean().default(false),
-      CACHE_HOST: Joi.string().default('localhost'),
-      CACHE_PORT: Joi.number().default(6379),
-      CACHE_TTL: Joi.number().default(3600),
-      THROTTLER_TTL: Joi.number().default(60),
-      THROTTLER_LIMIT: Joi.number().default(100),
+      CACHE_HOST: Joi.string().required(),
+      CACHE_PORT: Joi.number().required(),
+      CACHE_TTL: Joi.number().required(),
+      THROTTLER_TTL: Joi.number().required(),
+      THROTTLER_LIMIT: Joi.number().required(),
       URL_SHORT_CODE_LENGTH: Joi.number().default(10),
     });
 

@@ -8,6 +8,7 @@ import { Inject } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import { UrlWithVisitCountResponseDto } from "../dto/url-with-visit-count-response-dto";
 import { ConfigService } from '../../infrastructure/config/config.service';
+import { generateShortCode } from '../../common/utils/shortcode.util';
 
 @Injectable()
 export class UrlService {
@@ -34,8 +35,7 @@ export class UrlService {
   async create(createUrlDto: CreateUrlDto): Promise<Url> {
     const { longUrl } = createUrlDto;
     const shortCodeLength = this.configService.getNumber('URL_SHORT_CODE_LENGTH');
-    const { nanoid } = await import('nanoid');
-    const shortCode = nanoid(shortCodeLength);
+    const shortCode = generateShortCode(shortCodeLength);
 
     const url = this.urlRepository.create({ longUrl, shortCode });
     await this.urlRepository.save(url);
