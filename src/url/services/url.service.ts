@@ -6,7 +6,6 @@ import { CreateUrlDto } from '../dto/create-url.dto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject } from '@nestjs/common';
 import { Cache } from 'cache-manager';
-import { nanoid } from 'nanoid';
 import { UrlWithVisitCountResponseDto } from "../dto/url-with-visit-count-response-dto";
 import { ConfigService } from '../../infrastructure/config/config.service';
 
@@ -35,6 +34,7 @@ export class UrlService {
   async create(createUrlDto: CreateUrlDto): Promise<Url> {
     const { longUrl } = createUrlDto;
     const shortCodeLength = this.configService.getNumber('URL_SHORT_CODE_LENGTH');
+    const { nanoid } = await import('nanoid');
     const shortCode = nanoid(shortCodeLength);
 
     const url = this.urlRepository.create({ longUrl, shortCode });

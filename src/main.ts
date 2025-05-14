@@ -2,30 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { WinstonModule } from 'nest-winston';
-import * as winston from 'winston';
 import helmet from 'helmet';
 import { VersioningType } from '@nestjs/common';
+// import { createAppLogger } from './infrastructure/logger/logger.config';
+import { ConfigService } from './infrastructure/config/config.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: WinstonModule.createLogger({
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.json(),
-          ),
-        }),
-        new winston.transports.File({
-          filename: 'logs/error.log',
-          level: 'error',
-        }),
-        new winston.transports.File({
-          filename: 'logs/combined.log',
-        }),
-      ],
-    }),
+    // logger: false,
   });
 
   // Security middleware
@@ -58,6 +42,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  const configService = app.get(ConfigService);
+  await app.listen(configService.getNumber('PORT'));
 }
 bootstrap();

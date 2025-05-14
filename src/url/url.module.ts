@@ -5,15 +5,21 @@ import { UrlService } from './services/url.service';
 import { UrlController } from './controllers/url.controller';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
+import { ConfigModule } from '../infrastructure/config/config.module';
+import { ConfigService } from '../infrastructure/config/config.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Url]),
-    CacheModule.register({
-      store: redisStore,
-      host: 'localhost',
-      port: 6379,
-      ttl: 3600,
+    CacheModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        store: redisStore,
+        host: configService.getString('CACHE_HOST'),
+        port: configService.getNumber('CACHE_PORT'),
+        ttl: configService.getNumber('CACHE_TTL'),
+      }),
     }),
   ],
   controllers: [UrlController],

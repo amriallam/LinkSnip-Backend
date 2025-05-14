@@ -36,6 +36,7 @@ export class ConfigService {
 
   private validateInput(env: EnvConfig): EnvConfig {
     const envVarsSchema: Joi.ObjectSchema = Joi.object({
+      PORT: Joi.number().default(80),
       DATABASE_HOST: Joi.string().required(),
       DATABASE_PORT: Joi.number().default(3306),
       DATABASE_USER: Joi.string().required(),
@@ -43,13 +44,17 @@ export class ConfigService {
       DATABASE_NAME: Joi.string().required(),
       BASE_URL: Joi.string().uri().required(),
       DATABASE_SYNCHRONIZE: Joi.boolean().default(false),
+      CACHE_HOST: Joi.string().default('localhost'),
+      CACHE_PORT: Joi.number().default(6379),
       CACHE_TTL: Joi.number().default(3600),
+      THROTTLER_TTL: Joi.number().default(60),
+      THROTTLER_LIMIT: Joi.number().default(100),
       URL_SHORT_CODE_LENGTH: Joi.number().default(10),
     });
 
     const { error, value: validatedEnvConfig } = envVarsSchema.validate(env, {
       abortEarly: false,
-      allowUnknown: false
+      allowUnknown: true
     });
 
     if (error) {
