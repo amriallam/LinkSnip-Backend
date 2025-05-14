@@ -15,9 +15,15 @@ export class VisitService {
     ) { }
 
     async saveVisit(urlShortCode: string, ip: string): Promise<Visit> {
+        const existing = await this.visitRepository.findOne({ where: { ipAddress: ip } });
+        if (existing) {
+            return existing;
+        }
+        const url = await this.urlRepository.findOne({ where: { shortCode: urlShortCode } });
+        if (!url) throw new Error('URL not found');
         const visit = this.visitRepository.create({ 
             ipAddress: ip,
-            url: { shortCode: urlShortCode }
+            url: url
         });
         return this.visitRepository.save(visit);
     }

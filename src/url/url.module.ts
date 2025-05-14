@@ -7,10 +7,12 @@ import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-redis-store';
 import { ConfigModule } from '../infrastructure/config/config.module';
 import { ConfigService } from '../infrastructure/config/config.service';
+import { Visit } from '../visit/entities/visit.entity';
+import { VisitService } from '../visit/services/visit.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Url]),
+    TypeOrmModule.forFeature([Url, Visit]),
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -23,6 +25,6 @@ import { ConfigService } from '../infrastructure/config/config.service';
     }),
   ],
   controllers: [UrlController],
-  providers: [UrlService],
+  providers: [UrlService, VisitService],
 })
 export class UrlModule {}

@@ -6,7 +6,7 @@ export class Url {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ unique: true })
   longUrl: string;
 
   @Column({ unique: true })
