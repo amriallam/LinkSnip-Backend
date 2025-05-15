@@ -1,10 +1,9 @@
-import { Controller, Get, Post, Body, Param, HttpStatus, Query, Request, Res, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Request, Res, Logger } from '@nestjs/common';
 import { UrlService } from '../services/url.service';
 import { CreateUrlDto } from '../dto/create-url.dto';
 import { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import * as QRCode from 'qrcode';
 import { getClientIp } from 'src/common/utils/request.util';
 import { ConfigService } from '../../infrastructure/config/config.service';
 import { VisitService } from '../../visit/services/visit.service';
@@ -51,17 +50,6 @@ export class UrlController {
     const ipAddress = getClientIp(req);
     this.visitService.saveVisit(shortCode, ipAddress);
     return { originalUrl: url.longUrl };
-  }
-
-  @Get(':shortCode/qr')
-  @Throttle({ default: { limit: 10, ttl: 60 } })
-  @ApiOperation({ summary: 'Generate QR code for shortened URL' })
-  @ApiResponse({ status: 200, description: 'QR code generated successfully.' })
-  async generateQRCode(@Param('shortCode') shortCode: string) {
-    this.logger.log(`GET /${shortCode}/qr - Generate QR code`);
-    const shortUrl = `${this.baseUrl}/${shortCode}`;
-    const qrCode = await QRCode.toDataURL(shortUrl);
-    return { qrCode };
   }
 
   @Get()
