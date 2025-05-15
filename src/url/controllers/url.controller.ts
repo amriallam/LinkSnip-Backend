@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, HttpStatus, Query, Request, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpStatus, Query, Request, Res, Logger } from '@nestjs/common';
 import { UrlService } from '../services/url.service';
 import { CreateUrlDto } from '../dto/create-url.dto';
 import { Response } from 'express';
@@ -12,6 +12,7 @@ import { VisitService } from '../../visit/services/visit.service';
 @ApiTags('')
 @Controller()
 export class UrlController {
+  private readonly logger = new Logger(UrlController.name);
   constructor(
     private readonly urlService: UrlService,
     private readonly configService: ConfigService,
@@ -27,6 +28,7 @@ export class UrlController {
   @ApiOperation({ summary: 'Create a shortened URL' })
   @ApiResponse({ status: 201, description: 'URL successfully shortened.' })
   async create(@Body() createUrlDto: CreateUrlDto) {
+    this.logger.log(`POST / - Create short URL for: ${createUrlDto.longUrl}`);
     return this.urlService.create(createUrlDto);
   }
 
@@ -35,6 +37,7 @@ export class UrlController {
   @ApiOperation({ summary: 'Bulk shorten URLs' })
   @ApiResponse({ status: 201, description: 'URLs successfully shortened.' })
   async bulkCreate(@Body() createUrlDtos: CreateUrlDto[]) {
+    this.logger.log(`POST /bulk - Bulk create short URLs for ${createUrlDtos.length} URLs`);
     return this.urlService.bulkCreate(createUrlDtos);
   }
 
@@ -42,11 +45,12 @@ export class UrlController {
   @Throttle({ default: { limit: 10, ttl: 60 } })
   @ApiOperation({ summary: 'Redirect to original URL' })
   @ApiResponse({ status: 302, description: 'Redirects to the original URL.' })
-  async redirect(@Param('shortCode') shortCode: string, @Query() query, @Request() req, @Res() res: Response) {
+  async redirect(@Param('shortCode') shortCode: string, @Request() req) {
+    this.logger.log(`GET /${shortCode} - Redirect requested`);
     const url = await this.urlService.findByShortCode(shortCode);
     const ipAddress = getClientIp(req);
     this.visitService.saveVisit(shortCode, ipAddress);
-    return res.redirect(url.longUrl);
+    return { originalUrl: url.longUrl };
   }
 
   @Get(':shortCode/qr')
@@ -54,6 +58,7 @@ export class UrlController {
   @ApiOperation({ summary: 'Generate QR code for shortened URL' })
   @ApiResponse({ status: 200, description: 'QR code generated successfully.' })
   async generateQRCode(@Param('shortCode') shortCode: string) {
+    this.logger.log(`GET /${shortCode}/qr - Generate QR code`);
     const shortUrl = `${this.baseUrl}/${shortCode}`;
     const qrCode = await QRCode.toDataURL(shortUrl);
     return { qrCode };
@@ -67,9 +72,18 @@ export class UrlController {
     @Query('skip') skip: string = '0',
     @Query('take') take: string = '10'
   ) {
+    this.logger.log(`GET / - Get paginated URLs (skip=${skip}, take=${take})`);
     return this.urlService.getUrlsWithVisitCountsPaginated(
       parseInt(skip, 10),
       parseInt(take, 10)
     );
+  }
+
+  @Post('visit-counts')
+  @ApiOperation({ summary: 'Get visit counts for multiple short codes' })
+  @ApiResponse({ status: 200, description: 'Returns visit counts for the given short codes.' })
+  async getVisitCounts(@Body() body: { shortCodes: string[] }) {
+    this.logger.log(`POST /visit-counts - Get visit counts for ${body.shortCodes.length} short codes`);
+    return this.visitService.getVisitCountsByShortCodes(body.shortCodes);
   }
 } 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Url } from '../entities/url.entity';
@@ -16,6 +16,7 @@ import { VisitService } from '../../visit/services/visit.service';
 export class UrlService {
   private readonly shortCodeLength: number;
   private readonly cacheTtl: number;
+  private readonly logger = new Logger(UrlService.name);
 
   constructor(
     @InjectRepository(Url)
@@ -47,28 +48,33 @@ export class UrlService {
     const { longUrl } = createUrlDto;
     let url = await this.urlRepository.findOne({ where: { longUrl } });
     if (url) {
+      this.logger.log(`URL already exists for longUrl: ${longUrl}`);
       return url;
     }
     const shortCode = generateShortCode(this.shortCodeLength);
     url = this.urlRepository.create({ longUrl, shortCode });
     await this.urlRepository.save(url);
+    this.logger.log(`Created new URL: ${shortCode} -> ${longUrl}`);
     this.cacheManager.set(shortCode, JSON.stringify(url), this.cacheTtl);
+    this.logger.log(`Cached URL for shortCode: ${shortCode}`);
     return url;
   }
 
   async findByShortCode(shortCode: string): Promise<Url> {
     const cachedUrlStr = await this.cacheManager.get<string>(shortCode);
     if (cachedUrlStr) {
+      this.logger.log(`Cache hit for shortCode: ${shortCode}`);
       const cachedUrl = JSON.parse(cachedUrlStr);
       return cachedUrl;
     }
-
+    this.logger.log(`Cache miss for shortCode: ${shortCode}`);
     const url = await this.urlRepository.findOne({ where: { shortCode } });
     if (!url) {
+      this.logger.warn(`URL not found for shortCode: ${shortCode}`);
       throw new NotFoundException('URL not found');
     }
-
     this.cacheManager.set(shortCode, JSON.stringify(url), this.cacheTtl);
+    this.logger.log(`Cached URL for shortCode: ${shortCode}`);
     return url;
   }
 
@@ -122,6 +128,7 @@ export class UrlService {
       ...savedNewUrls
     ];
     allUrls.forEach(url => this.cacheManager.set(url.shortCode, JSON.stringify(url), this.cacheTtl));
+    this.logger.log(`Bulk cached ${allUrls.length} URLs`);
     const urlMap = new Map(allUrls.map(url => [url.longUrl, url]));
     return longUrls.map(longUrl => urlMap.get(longUrl)!);
   }
