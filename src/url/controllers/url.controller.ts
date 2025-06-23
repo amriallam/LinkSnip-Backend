@@ -4,7 +4,6 @@ import { CreateUrlDto } from '../dto/create-url.dto';
 import { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { getClientIp } from 'src/common/utils/request.util';
 import { ConfigService } from '../../infrastructure/config/config.service';
 import { VisitService } from '../../visit/services/visit.service';
 
@@ -47,8 +46,7 @@ export class UrlController {
   async redirect(@Param('shortCode') shortCode: string, @Request() req) {
     this.logger.log(`GET /${shortCode} - Redirect requested`);
     const url = await this.urlService.findByShortCode(shortCode);
-    const ipAddress = getClientIp(req);
-    this.visitService.saveVisit(shortCode, ipAddress);
+    this.visitService.saveVisit(shortCode);
     return { originalUrl: url.longUrl };
   }
 

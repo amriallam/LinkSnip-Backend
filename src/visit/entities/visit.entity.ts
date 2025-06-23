@@ -9,9 +9,6 @@ export class Visit {
   @ManyToOne(() => Url, url => url.visits)
   url: Url;
 
-  @Column({unique: true})
-  ipAddress: string;
-
   @CreateDateColumn()
   timestamp: Date;
 }

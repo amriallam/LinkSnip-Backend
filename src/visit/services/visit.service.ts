@@ -15,23 +15,17 @@ export class VisitService {
         private readonly urlRepository: Repository<Url>,
     ) { }
 
-    async saveVisit(urlShortCode: string, ip: string): Promise<Visit> {
-        const existing = await this.visitRepository.findOne({ where: { ipAddress: ip } });
-        if (existing) {
-            this.logger.log(`Visit already exists for IP: ${ip}`);
-            return existing;
-        }
+    async saveVisit(urlShortCode: string): Promise<Visit> {
         const url = await this.urlRepository.findOne({ where: { shortCode: urlShortCode } });
         if (!url) {
             this.logger.warn(`URL not found for shortCode: ${urlShortCode}`);
             throw new Error('URL not found');
         }
         const visit = this.visitRepository.create({ 
-            ipAddress: ip,
             url: url
         });
         const saved = await this.visitRepository.save(visit);
-        this.logger.log(`Saved new visit for shortCode: ${urlShortCode}, IP: ${ip}`);
+        this.logger.log(`Saved new visit for shortCode: ${urlShortCode}`);
         return saved;
     }
 
