@@ -22,7 +22,8 @@ export class VisitService {
             throw new Error('URL not found');
         }
         const visit = this.visitRepository.create({ 
-            url: url
+            url: url,
+            longUrl: url.longUrl
         });
         const saved = await this.visitRepository.save(visit);
         this.logger.log(`Saved new visit for shortCode: ${urlShortCode}`);

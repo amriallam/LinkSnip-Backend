@@ -1,12 +1,9 @@
-import { Entity, Column, CreateDateColumn, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Entity, Column, CreateDateColumn, OneToMany, PrimaryColumn } from "typeorm";
 import { Visit } from "src/visit/entities/visit.entity";
 
 @Entity()
 export class Url {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column({ unique: true })
+  @PrimaryColumn()
   longUrl: string;
 
   @Column({ unique: true })

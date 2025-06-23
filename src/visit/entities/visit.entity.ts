@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
 import { Url } from '../../url/entities/url.entity';
 
 @Entity()
@@ -7,7 +7,11 @@ export class Visit {
   id: number;
 
   @ManyToOne(() => Url, url => url.visits)
+  @JoinColumn({ name: 'longUrl' })
   url: Url;
+
+  @Column()
+  longUrl: string;
 
   @CreateDateColumn()
   timestamp: Date;
